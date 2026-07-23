@@ -24,9 +24,17 @@ export class PedidoOCRService {
   }) {
     console.log(`[PedidoOCRService] Processando talão de pedido para usuário ${data.userId}...`);
 
-    const imageUrl = data.imageBase64OrUrl.startsWith("http")
-      ? data.imageBase64OrUrl
-      : `data:image/jpeg;base64,${data.imageBase64OrUrl}`;
+    let imageUrl = data.imageBase64OrUrl.trim();
+    if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+      if (imageUrl.startsWith("data:")) {
+        if (!/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(imageUrl)) {
+          imageUrl = imageUrl.replace(/^data:[^;]+;base64,/, "");
+          imageUrl = `data:image/jpeg;base64,${imageUrl.replace(/\s+/g, "")}`;
+        }
+      } else {
+        imageUrl = `data:image/jpeg;base64,${imageUrl.replace(/\s+/g, "")}`;
+      }
+    }
 
     const systemPrompt = `Você é um assistente especialista em OCR de notas e talões de pedidos manuscritos brasileiros.
 Analise a imagem fornecida e extraia um JSON estruturado estritamente no seguinte formato:
@@ -52,28 +60,32 @@ IMPORTANTE:
 - Responda APENAS com o objeto JSON sem marcações em markdown ou explicações externas.`;
 
     // 1. Envia a imagem para GPT-4o Vision
-    const rawAiOutput = await this.openaiClient.client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Analise este talão de pedido manuscrito e extraia o JSON estruturado." },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.1,
-    });
-
-    const jsonText = rawAiOutput.choices[0]?.message?.content || "{}";
     let parsedRaw: any;
     try {
+      const rawAiOutput = await this.openaiClient.client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Analise este talão de pedido manuscrito e extraia o JSON estruturado." },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+      });
+
+      const jsonText = rawAiOutput.choices[0]?.message?.content || "{}";
       parsedRaw = JSON.parse(jsonText);
-    } catch (e) {
-      throw new AppError("Não foi possível realizar o OCR do talão. Formato de imagem não reconhecido.", 400);
+    } catch (error: any) {
+      console.error("[PedidoOCRService] Erro ao chamar OpenAI Vision:", error?.message || error);
+      throw new AppError(
+        "Não foi possível processar a foto do pedido. Por favor, envie uma imagem nos formatos PNG, JPEG ou WEBP com boa iluminação.",
+        400
+      );
     }
 
     // 2. Valida o JSON extraído com Zod Schema

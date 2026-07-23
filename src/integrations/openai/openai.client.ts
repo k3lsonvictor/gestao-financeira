@@ -44,9 +44,17 @@ export class OpenAIClient {
     try {
       console.log("[OpenAIClient] Analisando imagem/recibo via GPT-4o Vision...");
 
-      const imageUrl = imageBase64OrUrl.startsWith("http")
-        ? imageBase64OrUrl
-        : `data:image/jpeg;base64,${imageBase64OrUrl}`;
+      let imageUrl = imageBase64OrUrl.trim();
+      if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+        if (imageUrl.startsWith("data:")) {
+          if (!/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(imageUrl)) {
+            imageUrl = imageUrl.replace(/^data:[^;]+;base64,/, "");
+            imageUrl = `data:image/jpeg;base64,${imageUrl.replace(/\s+/g, "")}`;
+          }
+        } else {
+          imageUrl = `data:image/jpeg;base64,${imageUrl.replace(/\s+/g, "")}`;
+        }
+      }
 
       const response = await this.client.chat.completions.create({
         model: env.openaiModel || "gpt-4o-mini",
