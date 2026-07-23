@@ -128,6 +128,30 @@ async function runIntegrationTest() {
   console.log("👉 Intenção:", res9.intent);
   console.log("💬 Resposta da IA:\n", res9.responseText);
 
+  // Teste 10: Ajuste/Correção de Itens de Pedido via Áudio/Texto
+  console.log("\n🔟 Testando Mensagem 10 (Ajuste de Pedido): 'O primeiro item é um fardo de papel higiênico, que dá um valor de R$ 55,00. E o último item são seis rolos de fita, que aí sim dá R$ 84,00.'");
+  
+  // Criar primeiro um pedido prévio no banco para o teste
+  const pedidoRepo = new (await import("./src/repositories/pedido.repository.js")).PedidoRepository();
+  const testUser = await prisma.user.findUnique({ where: { phoneNumber: testPhone } });
+  if (testUser) {
+    await pedidoRepo.create({
+      userId: testUser.id,
+      clienteNome: "Cliente Exemplo",
+      valorTotal: 1.0,
+      itens: [{ descricao: "Papel Higiênico", quantidade: 1, precoUnitario: 1, subtotal: 1 }],
+    });
+  }
+
+  const res10 = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "O primeiro item é um fardo de papel higiênico, que dá um valor de R$ 55,00. E o último item são seis rolos de fita, que aí sim dá R$ 84,00.",
+  });
+  console.log("👉 Intenção:", res10.intent);
+  console.log("💬 Resposta da IA:\n", res10.responseText);
+  console.log("🔘 Botões do Pedido:", JSON.stringify(res10.buttons));
+
   console.log("\n==================================================");
   console.log("✅ TESTE DE INTEGRAÇÃO FINALIZADO COM SUCESSO!");
   console.log("==================================================");

@@ -98,6 +98,41 @@ export class PedidoRepository {
     });
   }
 
+  async findLatestByUser(userId: string) {
+    return prisma.pedido.findFirst({
+      where: { userId },
+      include: {
+        itens: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async updateOrderItems(id: string, itens: CreateItemPedidoDTO[], clienteNome?: string | null) {
+    const valorTotal = itens.reduce((sum, item) => sum + (item.subtotal || item.quantidade * item.precoUnitario), 0);
+
+    return prisma.$transaction(async (tx) => {
+      await tx.itemPedido.deleteMany({ where: { pedidoId: id } });
+
+      return tx.pedido.update({
+        where: { id },
+        data: {
+          ...(clienteNome !== undefined && { clienteNome }),
+          valorTotal,
+          itens: {
+            create: itens.map((item) => ({
+              descricao: item.descricao,
+              quantidade: item.quantidade,
+              precoUnitario: item.precoUnitario,
+              subtotal: item.subtotal || item.quantidade * item.precoUnitario,
+            })),
+          },
+        },
+        include: { itens: true },
+      });
+    });
+  }
+
   async updateStatus(id: string, statusPedido?: StatusPedido, statusPagamento?: StatusPagamento) {
     return prisma.pedido.update({
       where: { id },

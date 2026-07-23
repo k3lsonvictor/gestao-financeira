@@ -3,6 +3,7 @@ import { UserService } from "./user.service.js";
 import { TransactionService } from "./transaction.service.js";
 import { PayableService } from "./payable.service.js";
 import { PedidoOCRService } from "./pedido-ocr.service.js";
+import { PedidoRepository } from "../repositories/pedido.repository.js";
 import { ChatHistoryRepository } from "../repositories/chat-history.repository.js";
 import { getFinancialAgentSystemPrompt } from "../prompts/financial-agent.prompt.js";
 import type { ExtractedIntentJSON, IncomingMessagePayload, ProcessMessageResult } from "../types/financial.types.js";
@@ -15,6 +16,7 @@ export class FinancialAgentService {
   private transactionService: TransactionService;
   private payableService: PayableService;
   private pedidoOcrService: PedidoOCRService;
+  private pedidoRepository: PedidoRepository;
   private chatHistoryRepo: ChatHistoryRepository;
 
   constructor() {
@@ -23,6 +25,7 @@ export class FinancialAgentService {
     this.transactionService = new TransactionService();
     this.payableService = new PayableService();
     this.pedidoOcrService = new PedidoOCRService();
+    this.pedidoRepository = new PedidoRepository();
     this.chatHistoryRepo = new ChatHistoryRepository();
   }
 
@@ -210,6 +213,46 @@ export class FinancialAgentService {
 
       case "EDIT_TRANSACTION": {
         finalResponseText = "Sem problemas! O que você gostaria de alterar no lançamento? Pode digitar ou mandar por áudio a correção (ex: 'Altere o valor para 50 reais' ou 'Mude a categoria para Transporte'). ✍️";
+        break;
+      }
+
+      case "EDIT_PEDIDO": {
+        const latestOrder = await this.pedidoRepository.findLatestByUser(user.id);
+        if (!latestOrder) {
+          finalResponseText = "Não encontrei nenhum pedido recente para editar. Envie uma foto do talão de pedido para começar!";
+          break;
+        }
+
+        const rawItens = (parsedResult.data as any)?.itens || [];
+        if (rawItens.length > 0) {
+          const updatedItens = rawItens.map((item: any) => {
+            const qty = Number(item.quantidade) || 1;
+            const unit = Number(item.preco_unitario) || (Number(item.subtotal) / qty) || 0;
+            const subtotal = Number(item.subtotal) || (qty * unit);
+            return {
+              descricao: item.descricao || "Item do Pedido",
+              quantidade: qty,
+              precoUnitario: unit,
+              subtotal,
+            };
+          });
+
+          const updatedOrder = await this.pedidoRepository.updateOrderItems(
+            latestOrder.id,
+            updatedItens,
+            (parsedResult.data as any)?.cliente_nome
+          );
+
+          const formatted = this.pedidoOcrService.formatWhatsAppOrderMessage({
+            pedido: updatedOrder,
+            divergenciaCalculo: false,
+          });
+
+          finalResponseText = `✏️ *Pedido Atualizado com Sucesso!*\n\n${formatted.responseText.replace("📸 *Pedido Processado com Sucesso!*\n\n", "")}`;
+          buttons = formatted.buttons;
+        } else {
+          finalResponseText = "Sem problemas! O que você gostaria de alterar no pedido? Pode me enviar os itens, quantidades ou valores por texto ou áudio. ✍️";
+        }
         break;
       }
 

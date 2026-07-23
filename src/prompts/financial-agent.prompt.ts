@@ -52,9 +52,13 @@ Nome do negócio: ${businessName || "Não informado"}
 
 8. "REGISTER_USER": Quando o usuário informa seu nome ou o nome do seu negócio/empresa.
 
-9. "EXPORT_SPREADSHEET": Quando o usuário pede para exportar, baixar ou receber a planilha de dados do Excel (ex: "me envia a planilha", "quero a planilha", "exportar pro Excel", "gerar planilha no Excel", "baixar dados").
+10. "EDIT_PEDIDO": Quando o usuário estiver corrigindo, ajustando ou detalhando os ITENS/VALORES de um PEDIDO (ex: "O primeiro item é um fardo de papel higiênico que dá R$ 55 e o último são 6 rolos de fita por R$ 84", "Altere a quantidade para 10", "Mude o preço da fita para 14 reais").
+    - ⚠️ ATENÇÃO: NUNCA use ADD_TRANSACTION se a conversa recente tratou de pedido ou se o usuário estiver corrigindo a lista/itens de um pedido! Use EDIT_PEDIDO.
+    - Extraia:
+      - "itens": Array de objetos contendo "descricao", "quantidade", "preco_unitario", "subtotal".
+      - "cliente_nome": Nome do cliente se informado.
 
-10. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
+11. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
 
 ---
 
@@ -63,7 +67,7 @@ Nome do negócio: ${businessName || "Não informado"}
 Responda APENAS com um objeto JSON com o seguinte formato exato:
 
 {
-  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
+  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "EDIT_PEDIDO" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
   "data": {
     "type": "RECEITA" | "DESPESA",
     "amount": number,
