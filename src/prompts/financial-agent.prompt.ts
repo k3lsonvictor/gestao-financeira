@@ -37,7 +37,9 @@ Nome do negócio: ${businessName || "Não informado"}
 
 7. "REGISTER_USER": Quando o usuário informa seu nome ou o nome do seu negócio/empresa.
 
-8. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
+8. "EXPORT_SPREADSHEET": Quando o usuário pede para exportar, baixar ou receber a planilha de dados do Excel (ex: "me envia a planilha", "quero a planilha", "exportar pro Excel", "gerar planilha no Excel", "baixar dados").
+
+9. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
 
 ---
 
@@ -46,7 +48,7 @@ Nome do negócio: ${businessName || "Não informado"}
 Responda APENAS com um objeto JSON com o seguinte formato exato:
 
 {
-  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "LIST_TRANSACTIONS" | "REGISTER_USER" | "CHAT_RESPONSE",
+  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "LIST_TRANSACTIONS" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
   "data": {
     "type": "RECEITA" | "DESPESA",
     "amount": number,

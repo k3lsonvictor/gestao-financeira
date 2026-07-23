@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import { TransactionService } from "../services/transaction.service.js";
 import { PayableService } from "../services/payable.service.js";
 import { UserService } from "../services/user.service.js";
+import { SpreadsheetService } from "../services/spreadsheet.service.js";
 import { AppError } from "../errors/app-error.js";
 import { TransactionType, RecipientType } from "@prisma/client";
 
@@ -9,12 +10,42 @@ export class FinancialController {
   private transactionService: TransactionService;
   private payableService: PayableService;
   private userService: UserService;
+  private spreadsheetService: SpreadsheetService;
 
   constructor() {
     this.transactionService = new TransactionService();
     this.payableService = new PayableService();
     this.userService = new UserService();
+    this.spreadsheetService = new SpreadsheetService();
   }
+
+  public downloadSpreadsheet = async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { userId?: string };
+    const query = request.query as { phoneNumber?: string; userId?: string };
+
+    let targetUserId = params.userId || query.userId;
+
+    if (!targetUserId && query.phoneNumber) {
+      const user = await this.userService.getUserByPhone(query.phoneNumber);
+      if (!user) {
+        throw new AppError("Usuário não encontrado.", 404);
+      }
+      targetUserId = user.id;
+    }
+
+    if (!targetUserId) {
+      throw new AppError("Informe o 'userId' ou 'phoneNumber' para gerar a planilha.", 400);
+    }
+
+    const buffer = await this.spreadsheetService.generateFinancialSpreadsheetBuffer(targetUserId);
+    const dateStr = new Date().toISOString().split("T")[0];
+    const filename = `relatorio_financeiro_${dateStr}.xlsx`;
+
+    return reply
+      .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      .header("Content-Disposition", `attachment; filename="${filename}"`)
+      .send(buffer);
+  };
 
   public getSummary = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = request.query as { phoneNumber?: string; period?: "hoje" | "semana" | "mes" | "ano" | "geral" };

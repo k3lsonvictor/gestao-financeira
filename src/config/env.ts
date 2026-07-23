@@ -19,4 +19,5 @@ export const env = {
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
   kelIaApiUrl: process.env.KEL_IA_API_URL || "http://localhost:3333",
+  publicUrl: process.env.PUBLIC_URL || process.env.APP_URL || "https://gestao-financeira-11io.onrender.com",
 } as const;

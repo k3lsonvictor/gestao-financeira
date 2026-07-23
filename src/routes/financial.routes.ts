@@ -13,6 +13,10 @@ export const financialRoutes: FastifyPluginAsync = async (fastify: FastifyInstan
   // POST /api/finance/transactions - Cadastro manual de lançamentos
   fastify.post("/api/finance/transactions", controller.createTransaction);
 
+  // GET /api/finance/spreadsheet/:userId - Download da planilha Excel (.xlsx)
+  fastify.get("/api/finance/spreadsheet/:userId", controller.downloadSpreadsheet);
+  fastify.get("/api/finance/spreadsheet", controller.downloadSpreadsheet);
+
   // GET /api/finance/payables - Consulta de contas a pagar (fornecedores / equipe)
   fastify.get("/api/finance/payables", controller.listPayables);
 

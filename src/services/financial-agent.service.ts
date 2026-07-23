@@ -6,6 +6,7 @@ import { ChatHistoryRepository } from "../repositories/chat-history.repository.j
 import { getFinancialAgentSystemPrompt } from "../prompts/financial-agent.prompt.js";
 import type { ExtractedIntentJSON, IncomingMessagePayload, ProcessMessageResult } from "../types/financial.types.js";
 import { AppError } from "../errors/app-error.js";
+import { env } from "../config/env.js";
 
 export class FinancialAgentService {
   private openaiClient: OpenAIClient;
@@ -181,6 +182,15 @@ export class FinancialAgentService {
           );
           finalResponseText = `Prazer! Dados atualizados com sucesso. ${parsedResult.data.name ? `Nome: ${parsedResult.data.name}.` : ""} ${parsedResult.data.business_name ? `Negócio: ${parsedResult.data.business_name}.` : ""} 🤝`;
         }
+        break;
+      }
+
+      case "EXPORT_SPREADSHEET": {
+        const downloadUrl = `${env.publicUrl}/api/finance/spreadsheet/${user.id}`;
+        finalResponseText = `📊 *Sua planilha financeira no Excel está pronta!*\n\n` +
+          `Acesse o link abaixo para baixar seu relatório completo em Excel (.xlsx) com todas as receitas, despesas e contas a pagar:\n\n` +
+          `📥 *Link de Download:* ${downloadUrl}\n\n` +
+          `*(A planilha contém abas com Lançamentos, Contas a Pagar e Balanço Líquido).* 📗✨`;
         break;
       }
 

@@ -10,6 +10,7 @@ export type IntentType =
   | "LIST_PAYABLES"
   | "MARK_PAYABLE_PAID"
   | "REGISTER_USER"
+  | "EXPORT_SPREADSHEET"
   | "CHAT_RESPONSE";
 
 export interface TransactionExtractionData {
