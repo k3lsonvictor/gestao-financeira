@@ -33,7 +33,8 @@ export class FinancialAgentService {
 
     if (payload.messageType === "audio" && payload.audioBase64) {
       console.log("[FinancialAgentService] Transcrevendo nota de voz enviada pelo usuário...");
-      const audioBuffer = Buffer.from(payload.audioBase64, "base64");
+      const rawBase64 = payload.audioBase64.replace(/^data:[^;]+;base64,/, "");
+      const audioBuffer = Buffer.from(rawBase64, "base64");
       processedMessageText = await this.openaiClient.transcribeAudio(audioBuffer);
     } else if (payload.messageType === "image" && payload.imageBase64) {
       console.log("[FinancialAgentService] Analisando imagem de comprovante enviada...");
