@@ -73,6 +73,86 @@ export class TransactionService {
     };
   }
 
+  async getSalesSummary(userId: string, period: "hoje" | "semana" | "mes" | "ano" | "geral" = "mes") {
+    const now = new Date();
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+
+    if (period === "hoje") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    } else if (period === "semana") {
+      const dayOfWeek = now.getDay();
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - dayOfWeek), 23, 59, 59);
+    } else if (period === "mes") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    } else if (period === "ano") {
+      startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+    }
+
+    const salesSummary = await this.transactionRepository.getSalesSummary(userId, startDate, endDate);
+    return {
+      period,
+      ...salesSummary,
+    };
+  }
+
+  formatSalesSummaryWhatsAppMessage(salesSummary: any, period = "mes"): string {
+    const formatMoney = (val: number) =>
+      val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+    const periodLabelMap: Record<string, string> = {
+      hoje: "de Hoje",
+      semana: "desta Semana",
+      mes: "deste Mês",
+      ano: "deste Ano",
+      geral: "Geral (Todo o Período)",
+    };
+
+    const periodLabel = periodLabelMap[period] || "deste Mês";
+
+    if (salesSummary.count === 0) {
+      return `🛍️ *Resumo de Vendas ${periodLabel}*\n\nNenhuma venda foi registrada para este período.`;
+    }
+
+    let message = `🛍️ *Resumo Detalhado de Vendas ${periodLabel}*\n\n`;
+    message += `💰 *Faturamento Total:* ${formatMoney(salesSummary.totalVendas)}\n`;
+    message += `📦 *Total de Vendas Realizadas:* ${salesSummary.count} venda(s)\n`;
+
+    if (salesSummary.totalFiadoAtestado > 0) {
+      message += `📝 *Vendas em Fiado (A Receber):* ${formatMoney(salesSummary.totalFiadoAtestado)}\n`;
+    }
+
+    if (Object.keys(salesSummary.byPaymentMethod).length > 0) {
+      message += `\n💳 *Vendas por Meio de Pagamento:*\n`;
+      for (const [method, amount] of Object.entries(salesSummary.byPaymentMethod)) {
+        message += `• ${method}: ${formatMoney(amount as number)}\n`;
+      }
+    }
+
+    if (Object.keys(salesSummary.byCustomer).length > 0) {
+      message += `\n👥 *Vendas por Cliente:*\n`;
+      for (const [customer, amount] of Object.entries(salesSummary.byCustomer)) {
+        message += `• ${customer}: ${formatMoney(amount as number)}\n`;
+      }
+    }
+
+    message += `\n📋 *Detalhamento das Vendas:*\n`;
+    for (const s of salesSummary.salesList.slice(0, 10)) {
+      const dateStr = new Date(s.date).toLocaleDateString("pt-BR");
+      const clientStr = s.customerName ? ` | Cliente: ${s.customerName}` : "";
+      const parcelasStr = s.installments && s.installments > 1 ? ` (${s.installments}x)` : "";
+
+      message += `• *${formatMoney(Number(s.amount))}* - ${s.description}${clientStr}\n`;
+      message += `  ↳ _${s.paymentMethod}${parcelasStr}_ | ${dateStr}\n`;
+    }
+
+    return message;
+  }
+
   formatSummaryWhatsAppMessage(summary: any): string {
     const formatMoney = (val: number) =>
       val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

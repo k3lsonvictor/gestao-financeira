@@ -5,6 +5,7 @@ export type RecipientType = "FORNECEDOR" | "FUNCIONARIO" | "OUTRO";
 export type IntentType =
   | "ADD_TRANSACTION"
   | "GET_SUMMARY"
+  | "GET_SALES_SUMMARY"
   | "LIST_TRANSACTIONS"
   | "ADD_PAYABLE"
   | "LIST_PAYABLES"

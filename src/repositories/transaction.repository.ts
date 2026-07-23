@@ -110,6 +110,60 @@ export class TransactionRepository {
     };
   }
 
+  async getSalesSummary(userId: string, startDate?: Date, endDate?: Date) {
+    const where: Prisma.TransactionWhereInput = {
+      userId,
+      type: "RECEITA",
+    };
+
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) where.date.gte = startDate;
+      if (endDate) where.date.lte = endDate;
+    }
+
+    const sales = await prisma.transaction.findMany({
+      where,
+      orderBy: { date: "desc" },
+    });
+
+    let totalVendas = 0;
+    let totalFiadoAtestado = 0;
+    const byPaymentMethod: Record<string, number> = {};
+    const byCustomer: Record<string, number> = {};
+    const byCategory: Record<string, number> = {};
+
+    for (const s of sales) {
+      const numAmount = Number(s.amount);
+      totalVendas += numAmount;
+
+      const method = s.paymentMethod || "PIX/Outro";
+      byPaymentMethod[method] = (byPaymentMethod[method] || 0) + numAmount;
+
+      if (s.customerName) {
+        byCustomer[s.customerName] = (byCustomer[s.customerName] || 0) + numAmount;
+      }
+
+      if (s.category) {
+        byCategory[s.category] = (byCategory[s.category] || 0) + numAmount;
+      }
+
+      if (method.toLowerCase().includes("fiado")) {
+        totalFiadoAtestado += numAmount;
+      }
+    }
+
+    return {
+      totalVendas,
+      count: sales.length,
+      totalFiadoAtestado,
+      byPaymentMethod,
+      byCustomer,
+      byCategory,
+      salesList: sales,
+    };
+  }
+
   async delete(id: string, userId: string) {
     return prisma.transaction.deleteMany({
       where: { id, userId },

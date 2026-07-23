@@ -157,6 +157,14 @@ export class FinancialAgentService {
         break;
       }
 
+      case "GET_SALES_SUMMARY": {
+        const period = parsedResult.data?.period || "mes";
+        const salesSummary = await this.transactionService.getSalesSummary(user.id, period);
+        summaryData = salesSummary;
+        finalResponseText = this.transactionService.formatSalesSummaryWhatsAppMessage(salesSummary, period);
+        break;
+      }
+
       case "LIST_TRANSACTIONS": {
         const paymentMethodFilter = parsedResult.data?.payment_method;
         const list = await this.transactionService.listTransactions(user.id, {

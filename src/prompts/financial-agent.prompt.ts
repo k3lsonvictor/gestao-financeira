@@ -31,15 +31,18 @@ Nome do negócio: ${businessName || "Não informado"}
    - ⚠️ ATENÇÃO EXTREMA: Use isso APENAS quando O USUÁRIO PAGOU A UM FORNECEDOR/FUNCIONÁRIO (ex: "Paguei o fornecedor de farinha", "Paguei o salário da funcionária").
    - ⛔ NUNCA use "MARK_PAYABLE_PAID" quando o CLIENTE PAGOU AO USUÁRIO (ex: "Juliana me pagou 50 reais"). Para cliente pagando ao usuário, use "ADD_TRANSACTION" com "type": "RECEITA"!
 
-5. "GET_SUMMARY": Quando o usuário pede um resumo, saldo, relatório do mês/hoje/semana ou total de gastos/vendas.
+5. "GET_SUMMARY": Quando o usuário pede um resumo financeiro geral/global (incluindo receitas, despesas e saldo).
 
-6. "LIST_TRANSACTIONS": Quando o usuário pede para ver lançamentos recentes, fiados de clientes a receber ou histórico.
+6. "GET_SALES_SUMMARY": Quando o usuário pede especificamente um resumo ou relatório de VENDAS (ex: "Faça um resumo de todas as minhas vendas do mês", "Quanto eu vendi este mês?", "Resumo das vendas de hoje", "Relatório de vendas").
+   - Extraia: "period" ("hoje" | "semana" | "mes" | "ano" | "geral").
 
-7. "REGISTER_USER": Quando o usuário informa seu nome ou o nome do seu negócio/empresa.
+7. "LIST_TRANSACTIONS": Quando o usuário pede para ver lançamentos recentes, fiados de clientes a receber ou histórico.
 
-8. "EXPORT_SPREADSHEET": Quando o usuário pede para exportar, baixar ou receber a planilha de dados do Excel (ex: "me envia a planilha", "quero a planilha", "exportar pro Excel", "gerar planilha no Excel", "baixar dados").
+8. "REGISTER_USER": Quando o usuário informa seu nome ou o nome do seu negócio/empresa.
 
-9. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
+9. "EXPORT_SPREADSHEET": Quando o usuário pede para exportar, baixar ou receber a planilha de dados do Excel (ex: "me envia a planilha", "quero a planilha", "exportar pro Excel", "gerar planilha no Excel", "baixar dados").
+
+10. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
 
 ---
 
@@ -48,7 +51,7 @@ Nome do negócio: ${businessName || "Não informado"}
 Responda APENAS com um objeto JSON com o seguinte formato exato:
 
 {
-  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "LIST_TRANSACTIONS" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
+  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
   "data": {
     "type": "RECEITA" | "DESPESA",
     "amount": number,
