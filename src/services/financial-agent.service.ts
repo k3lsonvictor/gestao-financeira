@@ -167,17 +167,31 @@ export class FinancialAgentService {
 
       case "LIST_TRANSACTIONS": {
         const paymentMethodFilter = parsedResult.data?.payment_method;
+        const typeFilter = parsedResult.data?.type as any;
+        const periodFilter = parsedResult.data?.period || "mes";
+
         const list = await this.transactionService.listTransactions(user.id, {
           paymentMethod: paymentMethodFilter,
-          type: parsedResult.data?.type,
+          type: typeFilter,
           customerName: parsedResult.data?.customer_name,
+          period: periodFilter,
         });
 
-        const title = paymentMethodFilter && paymentMethodFilter.toLowerCase().includes("fiado")
-          ? "Contas em Fiado / A Receber de Clientes"
-          : "Lançamentos Recentes";
+        let title = "Lançamentos";
+        if (paymentMethodFilter && paymentMethodFilter.toLowerCase().includes("fiado")) {
+          title = "Contas em Fiado / A Receber de Clientes";
+        } else if (typeFilter === "RECEITA") {
+          title = "Entradas / Receitas";
+        } else if (typeFilter === "DESPESA") {
+          title = "Gastos / Despesas";
+        }
 
-        finalResponseText = this.transactionService.formatListWhatsAppMessage(list, title);
+        finalResponseText = this.transactionService.formatListWhatsAppMessage(
+          list,
+          title,
+          periodFilter,
+          typeFilter
+        );
         break;
       }
 

@@ -202,19 +202,78 @@ export class TransactionService {
     return message;
   }
 
-  async listTransactions(userId: string, filter?: { paymentMethod?: string; type?: TransactionType; customerName?: string; limit?: number }) {
-    return this.transactionRepository.findManyByUser(userId, filter);
-  }
+  async listTransactions(userId: string, filter?: { paymentMethod?: string; type?: TransactionType; customerName?: string; period?: "hoje" | "semana" | "mes" | "ano" | "geral"; limit?: number }) {
+    const period = filter?.period || "mes";
+    const now = new Date();
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
 
-  formatListWhatsAppMessage(transactions: any[], title = "Lançamentos"): string {
-    if (transactions.length === 0) {
-      return `ℹ️ Nenhum lançamento encontrado para os critérios solicitados.`;
+    if (period === "hoje") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    } else if (period === "semana") {
+      const dayOfWeek = now.getDay();
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - dayOfWeek), 23, 59, 59);
+    } else if (period === "mes") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    } else if (period === "ano") {
+      startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
     }
 
+    return this.transactionRepository.findManyByUser(userId, {
+      paymentMethod: filter?.paymentMethod,
+      type: filter?.type,
+      customerName: filter?.customerName,
+      startDate,
+      endDate,
+      limit: filter?.limit,
+    });
+  }
+
+  formatListWhatsAppMessage(
+    transactions: any[],
+    title = "Lançamentos",
+    period = "mes",
+    filterType?: TransactionType
+  ): string {
+    const periodLabelMap: Record<string, string> = {
+      hoje: "de Hoje",
+      semana: "desta Semana",
+      mes: "deste Mês",
+      ano: "deste Ano",
+      geral: "Geral (Todo o Período)",
+    };
+
+    const periodLabel = periodLabelMap[period] || "deste Mês";
     const formatMoney = (val: number) =>
       Number(val).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-    let message = `📋 *${title} (${transactions.length})*\n\n`;
+    if (transactions.length === 0) {
+      if (filterType === "RECEITA") {
+        return `📈 *Entradas/Receitas ${periodLabel}*\n\nNenhuma entrada foi registrada para este período.`;
+      } else if (filterType === "DESPESA") {
+        return `📉 *Gastos/Despesas ${periodLabel}*\n\nNenhum gasto foi registrado para este período.`;
+      }
+      return `📋 *${title} ${periodLabel}*\n\nNenhum lançamento foi encontrado para os critérios solicitados.`;
+    }
+
+    const totalSum = transactions.reduce((acc, t) => acc + Number(t.amount), 0);
+
+    let message = "";
+    if (filterType === "RECEITA") {
+      message = `📈 *Relatório de Entradas/Receitas ${periodLabel}*\n`;
+      message += `💰 *Total de Entradas:* ${formatMoney(totalSum)}\n`;
+      message += `📦 *Quantidade:* ${transactions.length} entrada(s)\n\n`;
+    } else if (filterType === "DESPESA") {
+      message = `📉 *Relatório de Gastos/Despesas ${periodLabel}*\n`;
+      message += `💸 *Total de Gastos:* ${formatMoney(totalSum)}\n`;
+      message += `📦 *Quantidade:* ${transactions.length} gasto(s)\n\n`;
+    } else {
+      message = `📋 *${title} ${periodLabel} (${transactions.length})*\n\n`;
+    }
 
     for (const t of transactions) {
       const typeEmoji = t.type === "RECEITA" ? "📈" : "📉";
@@ -226,6 +285,6 @@ export class TransactionService {
       message += `   ↳ _${t.category}_ | ${t.paymentMethod}${parcelasInfo} | ${dateStr}\n\n`;
     }
 
-    return message;
+    return message.trim();
   }
 }

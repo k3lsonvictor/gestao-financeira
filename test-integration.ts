@@ -77,6 +77,26 @@ async function runIntegrationTest() {
   console.log("👉 Intenção:", res5.intent);
   console.log("💬 Resposta da IA:\n", res5.responseText);
 
+  // Teste 6: Consulta de Apenas Gastos
+  console.log("\n6️⃣  Testando Mensagem 6: 'Quero ver apenas os meus gastos deste mês'");
+  const res6 = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "Quero ver apenas os meus gastos deste mês",
+  });
+  console.log("👉 Intenção:", res6.intent);
+  console.log("💬 Resposta da IA:\n", res6.responseText);
+
+  // Teste 7: Consulta de Apenas Entradas
+  console.log("\n7️⃣  Testando Mensagem 7: 'Mostre apenas as minhas entradas'");
+  const res7 = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "Mostre apenas as minhas entradas",
+  });
+  console.log("👉 Intenção:", res7.intent);
+  console.log("💬 Resposta da IA:\n", res7.responseText);
+
   console.log("\n==================================================");
   console.log("✅ TESTE DE INTEGRAÇÃO FINALIZADO COM SUCESSO!");
   console.log("==================================================");

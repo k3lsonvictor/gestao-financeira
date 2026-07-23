@@ -38,7 +38,13 @@ Nome do negócio: ${businessName || "Não informado"}
 6. "GET_SALES_SUMMARY": Quando o usuário pede especificamente um resumo ou relatório de VENDAS (ex: "Faça um resumo de todas as minhas vendas do mês", "Quanto eu vendi este mês?", "Resumo das vendas de hoje", "Relatório de vendas").
    - Extraia: "period" ("hoje" | "semana" | "mes" | "ano" | "geral").
 
-7. "LIST_TRANSACTIONS": Quando o usuário pede para ver lançamentos recentes, fiados de clientes a receber ou histórico.
+7. "LIST_TRANSACTIONS": Quando o usuário pede para ver lançamentos recentes, apenas os gastos/despesas, apenas as entradas/receitas, fiados de clientes a receber ou histórico de um período.
+   - Extraia se informado:
+     - "type": "DESPESA" (se o usuário pediu apenas gastos/despesas, ex: "ver apenas meus gastos", "mostrar despesas do mês", "quais foram meus gastos de hoje?", "relatório de despesas").
+     - "type": "RECEITA" (se o usuário pediu apenas entradas/receitas, ex: "ver apenas minhas entradas", "mostrar receitas da semana", "quais foram as entradas de hoje?", "relatório de entradas").
+     - "period": "hoje" | "semana" | "mes" | "ano" | "geral" (padrão: "mes").
+     - "customer_name": nome do cliente se filtrado por cliente.
+     - "payment_method": forma de pagamento se filtrado.
 
 8. "REGISTER_USER": Quando o usuário informa seu nome ou o nome do seu negócio/empresa.
 
@@ -128,7 +134,31 @@ Saída JSON:
   "response_text": "Perfeito! Registrei o pagamento de fiado de R$ 50,00 recebido da cliente Juliana. 💵✨"
 }
 
-Exemplo 4 (Conta a Pagar de Fornecedor):
+Exemplo 4 (Consulta de Apenas Gastos/Despesas):
+Entrada: "Quero ver apenas os meus gastos deste mês"
+Saída JSON:
+{
+  "intent": "LIST_TRANSACTIONS",
+  "data": {
+    "type": "DESPESA",
+    "period": "mes"
+  },
+  "response_text": "Aqui estão apenas os seus gastos e despesas registrados este mês: 📉"
+}
+
+Exemplo 5 (Consulta de Apenas Entradas/Receitas de Hoje):
+Entrada: "Mostre apenas as minhas entradas de hoje"
+Saída JSON:
+{
+  "intent": "LIST_TRANSACTIONS",
+  "data": {
+    "type": "RECEITA",
+    "period": "hoje"
+  },
+  "response_text": "Aqui estão apenas as suas entradas e receitas registradas hoje: 📈"
+}
+
+Exemplo 6 (Conta a Pagar de Fornecedor):
 Entrada: "Tenho que pagar 450 reais pro fornecedor Moinho Sul dia 15"
 Saída JSON:
 {
@@ -143,7 +173,7 @@ Saída JSON:
   "response_text": "Agendado! Cadastrei a conta a pagar para o fornecedor Moinho Sul de R$ 450,00 com vencimento em 15/08. 📅"
 }
 
-Exemplo 5 (Conta a Pagar de Funcionário):
+Exemplo 7 (Conta a Pagar de Funcionário):
 Entrada: "Salário do Marcos de 1500 reais vence dia 05 do mês que vem"
 Saída JSON:
 {
