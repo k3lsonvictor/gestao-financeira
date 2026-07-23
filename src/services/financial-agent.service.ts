@@ -71,19 +71,35 @@ export class FinancialAgentService {
       })),
     ];
 
-    // 7. Chamar OpenAI com extração estruturada de JSON
-    console.log("[FinancialAgentService] Extraindo intenção e dados estruturados via OpenAI...");
-    const rawAiOutput = await this.openaiClient.generateCompletion(messagesForModel, true);
+    const cleanText = processedMessageText.trim();
+    const cleanLower = cleanText.toLowerCase();
 
+    let isButtonClicked = false;
     let parsedResult: ExtractedIntentJSON;
-    try {
-      parsedResult = JSON.parse(rawAiOutput);
-    } catch (err) {
-      console.error("[FinancialAgentService] Erro ao parsear JSON da OpenAI:", rawAiOutput);
-      parsedResult = {
-        intent: "CHAT_RESPONSE",
-        response_text: "Desculpe, não consegui entender perfeitamente o lançamento. Pode repetir?",
-      };
+
+    if (cleanText.startsWith("fin_confirm_") || cleanLower === "✅ sim, confirmar" || cleanLower === "sim, confirmar" || cleanLower === "confirmar lançamento") {
+      parsedResult = { intent: "CONFIRM_TRANSACTION" };
+      isButtonClicked = true;
+    } else if (cleanText.startsWith("fin_cancel_") || cleanLower === "❌ cancelar" || cleanLower === "cancelar lançamento") {
+      parsedResult = { intent: "CANCEL_TRANSACTION" };
+      isButtonClicked = true;
+    } else if (cleanText.startsWith("fin_edit_") || cleanLower === "✏️ editar" || cleanLower === "editar lançamento") {
+      parsedResult = { intent: "EDIT_TRANSACTION" };
+      isButtonClicked = true;
+    } else {
+      // 7. Chamar OpenAI com extração estruturada de JSON
+      console.log("[FinancialAgentService] Extraindo intenção e dados estruturados via OpenAI...");
+      const rawAiOutput = await this.openaiClient.generateCompletion(messagesForModel, true);
+
+      try {
+        parsedResult = JSON.parse(rawAiOutput);
+      } catch (err) {
+        console.error("[FinancialAgentService] Erro ao parsear JSON da OpenAI:", rawAiOutput);
+        parsedResult = {
+          intent: "CHAT_RESPONSE",
+          response_text: "Desculpe, não consegui entender perfeitamente o lançamento. Pode repetir?",
+        };
+      }
     }
 
     console.log(`[FinancialAgentService] Intenção identificada: ${parsedResult.intent}`);
@@ -92,6 +108,7 @@ export class FinancialAgentService {
     let transactionCreated: any = null;
     let payableCreated: any = null;
     let summaryData: any = null;
+    let buttons: Array<{ id: string; title: string }> | undefined = undefined;
 
     // 8. Executar ação no banco de dados com base na intenção
     switch (parsedResult.intent) {
@@ -108,9 +125,40 @@ export class FinancialAgentService {
             installments: parsedResult.data.installments,
             date: parsedResult.data.date,
           });
+
+          const formattedAmount = Number(transactionCreated.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+          const categoryName = transactionCreated.category;
+
+          finalResponseText = `Registrei ${formattedAmount} em ${categoryName}. Está certo?`;
+          buttons = [
+            { id: `fin_confirm_${transactionCreated.id}`, title: "✅ Sim, confirmar" },
+            { id: `fin_edit_${transactionCreated.id}`, title: "✏️ Editar" },
+            { id: `fin_cancel_${transactionCreated.id}`, title: "❌ Cancelar" },
+          ];
         } else {
-          finalResponseText = "Não identifiquei o valor numérico da transação. Por favor, me informe o valor em reais (ex: R$ 50,00).";
+          finalResponseText = parsedResult.response_text || "Não consegui entender o valor. Pode me falar quanto foi? Ex: Gastei 50 na papelaria";
         }
+        break;
+      }
+
+      case "CONFIRM_TRANSACTION": {
+        finalResponseText = "Perfeito! Lançamento verificado e confirmado no seu caixa com sucesso. 🚀✨";
+        break;
+      }
+
+      case "CANCEL_TRANSACTION": {
+        const deleted = await this.transactionService.deleteLatestTransaction(user.id);
+        if (deleted) {
+          const formattedAmount = Number(deleted.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+          finalResponseText = `🗑️ Lançamento de ${formattedAmount} (${deleted.description}) cancelado e removido do seu caixa!`;
+        } else {
+          finalResponseText = "Não encontrei nenhum lançamento recente para cancelar.";
+        }
+        break;
+      }
+
+      case "EDIT_TRANSACTION": {
+        finalResponseText = "Sem problemas! O que você gostaria de alterar no lançamento? Pode digitar ou mandar por áudio a correção (ex: 'Altere o valor para 50 reais' ou 'Mude a categoria para Transporte'). ✍️";
         break;
       }
 
@@ -233,6 +281,7 @@ export class FinancialAgentService {
       transactionCreated,
       payableCreated,
       summaryData,
+      buttons,
     };
   }
 }

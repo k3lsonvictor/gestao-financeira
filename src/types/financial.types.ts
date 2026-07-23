@@ -10,6 +10,9 @@ export type IntentType =
   | "ADD_PAYABLE"
   | "LIST_PAYABLES"
   | "MARK_PAYABLE_PAID"
+  | "CONFIRM_TRANSACTION"
+  | "CANCEL_TRANSACTION"
+  | "EDIT_TRANSACTION"
   | "REGISTER_USER"
   | "EXPORT_SPREADSHEET"
   | "CHAT_RESPONSE";
@@ -87,4 +90,5 @@ export interface ProcessMessageResult {
   transactionCreated?: any;
   payableCreated?: any;
   summaryData?: any;
+  buttons?: Array<{ id: string; title: string }>;
 }

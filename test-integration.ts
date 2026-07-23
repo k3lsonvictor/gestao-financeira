@@ -97,6 +97,37 @@ async function runIntegrationTest() {
   console.log("👉 Intenção:", res7.intent);
   console.log("💬 Resposta da IA:\n", res7.responseText);
 
+  // Teste 8: Lançamento com Confirmação em Botões
+  console.log("\n8️⃣  Testando Mensagem 8 (Botões de Confirmação): 'Comprei embalagens por 35 reais no dinheiro'");
+  const res8 = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "Comprei embalagens por 35 reais no dinheiro",
+  });
+  console.log("👉 Intenção:", res8.intent);
+  console.log("💬 Resposta da IA:\n", res8.responseText);
+  console.log("🔘 Botões Gerados:", JSON.stringify(res8.buttons));
+
+  // Teste 8.1: Clique no botão de confirmação
+  console.log("\n8️⃣.1 Clique no Botão: '✅ Sim, confirmar'");
+  const res8Click = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "✅ Sim, confirmar",
+  });
+  console.log("👉 Intenção:", res8Click.intent);
+  console.log("💬 Resposta da IA:\n", res8Click.responseText);
+
+  // Teste 9: Tratamento de Mensagem Confusa / Sem Valor Numérico
+  console.log("\n9️⃣  Testando Mensagem Confusa 9: 'comprei uns trem lá pra loja'");
+  const res9 = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "comprei uns trem lá pra loja",
+  });
+  console.log("👉 Intenção:", res9.intent);
+  console.log("💬 Resposta da IA:\n", res9.responseText);
+
   console.log("\n==================================================");
   console.log("✅ TESTE DE INTEGRAÇÃO FINALIZADO COM SUCESSO!");
   console.log("==================================================");

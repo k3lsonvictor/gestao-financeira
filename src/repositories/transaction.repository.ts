@@ -42,6 +42,24 @@ export class TransactionRepository {
     });
   }
 
+  async deleteById(id: string, userId: string) {
+    return prisma.transaction.deleteMany({
+      where: { id, userId },
+    });
+  }
+
+  async deleteLatest(userId: string) {
+    const latest = await prisma.transaction.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    if (latest) {
+      await prisma.transaction.delete({ where: { id: latest.id } });
+      return latest;
+    }
+    return null;
+  }
+
   async findManyByUser(userId: string, filters?: TransactionFilterDTO) {
     const where: Prisma.TransactionWhereInput = { userId };
 

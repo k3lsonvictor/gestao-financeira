@@ -46,6 +46,14 @@ export class TransactionService {
     });
   }
 
+  async deleteLatestTransaction(userId: string) {
+    return this.transactionRepository.deleteLatest(userId);
+  }
+
+  async deleteTransactionById(id: string, userId: string) {
+    return this.transactionRepository.deleteById(id, userId);
+  }
+
   async getSummary(userId: string, period: "hoje" | "semana" | "mes" | "ano" | "geral" = "mes") {
     const now = new Date();
     let startDate: Date | undefined;
