@@ -1,0 +1,91 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TransactionType {
+  RECEITA
+  DESPESA
+}
+
+enum ChatRole {
+  user
+  assistant
+  system
+}
+
+enum PayableStatus {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
+
+enum RecipientType {
+  FORNECEDOR
+  FUNCIONARIO
+  OUTRO
+}
+
+model User {
+  id           String        @id @default(uuid())
+  phoneNumber  String        @unique @map("phone_number")
+  name         String
+  businessName String?       @map("business_name")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  transactions Transaction[]
+  chatHistory  ChatHistory[]
+  payables     Payable[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  type          TransactionType
+  amount        Decimal         @db.Decimal(12, 2)
+  category      String
+  description   String          @db.Text
+  date          DateTime        @default(now()) @db.Date
+  paymentMethod String          @map("payment_method")
+  customerName  String?         @map("customer_name")
+  installments  Int?            @default(1)
+  receiptUrl    String?         @map("receipt_url")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Payable {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  recipientName String        @map("recipient_name")
+  recipientType RecipientType @default(FORNECEDOR) @map("recipient_type")
+  description   String        @db.Text
+  amount        Decimal       @db.Decimal(12, 2)
+  dueDate       DateTime      @map("due_date") @db.Date
+  status        PayableStatus @default(PENDENTE)
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payables")
+}
+
+model ChatHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  role      ChatRole
+  content   String   @db.Text
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_history")
+}
