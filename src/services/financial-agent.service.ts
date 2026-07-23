@@ -2,6 +2,7 @@ import { OpenAIClient } from "../integrations/openai/openai.client.js";
 import { UserService } from "./user.service.js";
 import { TransactionService } from "./transaction.service.js";
 import { PayableService } from "./payable.service.js";
+import { PedidoOCRService } from "./pedido-ocr.service.js";
 import { ChatHistoryRepository } from "../repositories/chat-history.repository.js";
 import { getFinancialAgentSystemPrompt } from "../prompts/financial-agent.prompt.js";
 import type { ExtractedIntentJSON, IncomingMessagePayload, ProcessMessageResult } from "../types/financial.types.js";
@@ -13,6 +14,7 @@ export class FinancialAgentService {
   private userService: UserService;
   private transactionService: TransactionService;
   private payableService: PayableService;
+  private pedidoOcrService: PedidoOCRService;
   private chatHistoryRepo: ChatHistoryRepository;
 
   constructor() {
@@ -20,6 +22,7 @@ export class FinancialAgentService {
     this.userService = new UserService();
     this.transactionService = new TransactionService();
     this.payableService = new PayableService();
+    this.pedidoOcrService = new PedidoOCRService();
     this.chatHistoryRepo = new ChatHistoryRepository();
   }
 
@@ -29,7 +32,28 @@ export class FinancialAgentService {
     // 1. Obter ou criar usuário no banco
     const user = await this.userService.getOrCreateUser(payload.phoneNumber, payload.userName);
 
-    // 2. Tratar entradas multimídia (áudio/imagem)
+    // 2. Processar Fotos de Talão de Pedido Manuscrito (OCR Multimodal)
+    if (payload.messageType === "image" && payload.imageBase64) {
+      console.log("[FinancialAgentService] Analisando talão de pedido via Visão Computacional / OCR Multimodal...");
+      const ocrResult = await this.pedidoOcrService.processAndSaveOrderImage({
+        userId: user.id,
+        imageBase64OrUrl: payload.imageBase64,
+      });
+
+      const formatted = this.pedidoOcrService.formatWhatsAppOrderMessage(ocrResult);
+      await this.chatHistoryRepo.addMessage(user.id, "user", "[Foto de Talão de Pedido Enviada]");
+      await this.chatHistoryRepo.addMessage(user.id, "assistant", formatted.responseText);
+
+      return {
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        intent: "OCR_PEDIDO",
+        responseText: formatted.responseText,
+        buttons: formatted.buttons,
+      };
+    }
+
+    // Tratar notas de voz
     let processedMessageText = payload.textBody || "";
 
     if (payload.messageType === "audio" && payload.audioBase64) {
@@ -37,15 +61,45 @@ export class FinancialAgentService {
       const rawBase64 = payload.audioBase64.replace(/^data:[^;]+;base64,/, "");
       const audioBuffer = Buffer.from(rawBase64, "base64");
       processedMessageText = await this.openaiClient.transcribeAudio(audioBuffer);
-    } else if (payload.messageType === "image" && payload.imageBase64) {
-      console.log("[FinancialAgentService] Analisando imagem de comprovante enviada...");
-      const visionPrompt = "Descreva detalhadamente o valor total, tipo de transação, data, estabelecimento/categoria, nome do cliente (se houver) e forma de pagamento presente nesta nota ou recibo.";
-      const imageAnalysis = await this.openaiClient.analyzeReceiptImage(payload.imageBase64, visionPrompt);
-      processedMessageText = `[Foto do Recibo Enviada] ${processedMessageText ? `Legenda do usuário: ${processedMessageText}. ` : ""}Análise do recibo: ${imageAnalysis}`;
     }
 
     if (!processedMessageText.trim()) {
       throw new AppError("Mensagem vazia ou sem conteúdo identificável.", 400);
+    }
+
+    const cleanText = processedMessageText.trim();
+    const cleanLower = cleanText.toLowerCase();
+
+    // 2.1 Botões Interativos de Pedidos (Confirmar, Editar, PDF)
+    if (cleanText.startsWith("ped_confirm_") || cleanLower === "✅ confirmar pedido" || cleanLower === "confirmar pedido") {
+      const resp = "✅ *Pedido verificado e confirmado com sucesso!* 🚀\nSe o pedido tiver sido marcado como pago, o valor já foi atualizado no seu fluxo de caixa.";
+      await this.chatHistoryRepo.addMessage(user.id, "assistant", resp);
+      return {
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        intent: "CONFIRM_PEDIDO",
+        responseText: resp,
+      };
+    } else if (cleanText.startsWith("ped_edit_") || cleanLower === "✏️ editar / ajustar" || cleanLower === "editar pedido") {
+      const resp = "Sem problemas! Qual item, quantidade ou valor do pedido você deseja ajustar? Pode me responder por texto ou áudio a correção. ✍️";
+      await this.chatHistoryRepo.addMessage(user.id, "assistant", resp);
+      return {
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        intent: "EDIT_PEDIDO",
+        responseText: resp,
+      };
+    } else if (cleanText.startsWith("ped_pdf_") || cleanLower === "📄 gerar pdf" || cleanLower === "gerar pdf") {
+      const pedidoId = cleanText.startsWith("ped_pdf_") ? cleanText.replace("ped_pdf_", "") : "";
+      const pdfUrl = `${env.publicUrl}/api/finance/pedido/${pedidoId || "doc"}/pdf`;
+      const resp = `📄 *Seu Pedido em PDF está pronto para visualização/impressão!*\n\n📥 *Link do Documento/PDF:* ${pdfUrl}\n\n*(Clique no link para abrir a via completa do pedido).* 📗✨`;
+      await this.chatHistoryRepo.addMessage(user.id, "assistant", resp);
+      return {
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        intent: "GENERATE_PEDIDO_PDF",
+        responseText: resp,
+      };
     }
 
     // 3. Salvar mensagem do usuário no histórico de conversa
@@ -70,9 +124,6 @@ export class FinancialAgentService {
         content: h.content,
       })),
     ];
-
-    const cleanText = processedMessageText.trim();
-    const cleanLower = cleanText.toLowerCase();
 
     let isButtonClicked = false;
     let parsedResult: ExtractedIntentJSON;

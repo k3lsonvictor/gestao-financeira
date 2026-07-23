@@ -137,4 +137,21 @@ export class WebhookController {
       data: result,
     });
   };
+
+  /**
+   * Endpoint para visualização/impressão do PDF do Pedido
+   */
+  public getOrderPDF = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const repo = new (await import("../repositories/pedido.repository.js")).PedidoRepository();
+    const pdfService = new (await import("../services/pdf-generator.service.js")).PDFGeneratorService();
+
+    const pedido = await repo.findById(id);
+    if (!pedido) {
+      throw new AppError("Pedido não encontrado.", 404);
+    }
+
+    const htmlContent = pdfService.generateOrderHTML(pedido);
+    return reply.type("text/html").send(htmlContent);
+  };
 }

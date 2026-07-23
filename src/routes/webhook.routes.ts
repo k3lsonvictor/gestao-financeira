@@ -12,4 +12,7 @@ export const webhookRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
 
   // POST /api/finance/process-message - Processamento direto (para kel-ia / testes)
   fastify.post("/api/finance/process-message", controller.processDirectMessage);
+
+  // GET /api/finance/pedido/:id/pdf - Visualização/impressão do PDF do pedido
+  fastify.get("/api/finance/pedido/:id/pdf", controller.getOrderPDF);
 };
