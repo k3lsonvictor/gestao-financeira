@@ -79,31 +79,40 @@ export class TransactionRepository {
 
     let totalReceitas = 0;
     let totalDespesas = 0;
-    let totalFiados = 0;
+    let totalFiadosGerados = 0;
+    let totalRecebimentosFiado = 0;
     const categoryTotals: Record<string, number> = {};
 
     for (const t of transactions) {
       const numAmount = Number(t.amount);
+      const isFiadoReceipt =
+        t.category.toLowerCase().includes("recebimento de fiado") ||
+        t.description.toLowerCase().includes("pagamento de fiado");
+
       if (t.type === "RECEITA") {
         totalReceitas += numAmount;
+        if (isFiadoReceipt) {
+          totalRecebimentosFiado += numAmount;
+        }
       } else if (t.type === "DESPESA") {
         totalDespesas += numAmount;
       }
 
-      if (t.paymentMethod.toLowerCase().includes("fiado")) {
-        totalFiados += numAmount;
+      if (t.paymentMethod.toLowerCase().includes("fiado") && !isFiadoReceipt) {
+        totalFiadosGerados += numAmount;
       }
 
       categoryTotals[t.category] = (categoryTotals[t.category] || 0) + numAmount;
     }
 
     const saldo = totalReceitas - totalDespesas;
+    const totalFiadosPendentes = Math.max(0, totalFiadosGerados - totalRecebimentosFiado);
 
     return {
       totalReceitas,
       totalDespesas,
       saldo,
-      totalFiados,
+      totalFiados: totalFiadosPendentes,
       count: transactions.length,
       categoryTotals,
       recentTransactions: transactions.slice(0, 5),
@@ -127,39 +136,64 @@ export class TransactionRepository {
       orderBy: { date: "desc" },
     });
 
-    let totalVendas = 0;
-    let totalFiadoAtestado = 0;
+    let totalNovasVendas = 0;
+    let totalRecebimentosFiado = 0;
+    let totalFiadoGerado = 0;
+    let countVendas = 0;
+
     const byPaymentMethod: Record<string, number> = {};
-    const byCustomer: Record<string, number> = {};
     const byCategory: Record<string, number> = {};
+    const customerSummary: Record<string, { vendas: number; pagoFiado: number; devendo: number }> = {};
 
     for (const s of sales) {
       const numAmount = Number(s.amount);
-      totalVendas += numAmount;
+      const isFiadoReceipt =
+        s.category.toLowerCase().includes("recebimento de fiado") ||
+        s.description.toLowerCase().includes("pagamento de fiado");
 
-      const method = s.paymentMethod || "PIX/Outro";
-      byPaymentMethod[method] = (byPaymentMethod[method] || 0) + numAmount;
+      const method = s.paymentMethod || "Outro";
+      const isMethodFiado = method.toLowerCase().includes("fiado");
 
-      if (s.customerName) {
-        byCustomer[s.customerName] = (byCustomer[s.customerName] || 0) + numAmount;
-      }
+      if (isFiadoReceipt) {
+        totalRecebimentosFiado += numAmount;
 
-      if (s.category) {
+        if (s.customerName) {
+          const c = customerSummary[s.customerName] || { vendas: 0, pagoFiado: 0, devendo: 0 };
+          c.pagoFiado += numAmount;
+          c.devendo = Math.max(0, c.vendas - c.pagoFiado);
+          customerSummary[s.customerName] = c;
+        }
+      } else {
+        totalNovasVendas += numAmount;
+        countVendas++;
+
+        if (isMethodFiado) {
+          totalFiadoGerado += numAmount;
+        }
+
+        byPaymentMethod[method] = (byPaymentMethod[method] || 0) + numAmount;
         byCategory[s.category] = (byCategory[s.category] || 0) + numAmount;
-      }
 
-      if (method.toLowerCase().includes("fiado")) {
-        totalFiadoAtestado += numAmount;
+        if (s.customerName) {
+          const c = customerSummary[s.customerName] || { vendas: 0, pagoFiado: 0, devendo: 0 };
+          c.vendas += numAmount;
+          c.devendo = Math.max(0, c.vendas - c.pagoFiado);
+          customerSummary[s.customerName] = c;
+        }
       }
     }
 
+    const totalFiadoPendenteAtual = Math.max(0, totalFiadoGerado - totalRecebimentosFiado);
+
     return {
-      totalVendas,
-      count: sales.length,
-      totalFiadoAtestado,
+      totalNovasVendas,
+      totalRecebimentosFiado,
+      totalFiadoGerado,
+      totalFiadoPendenteAtual,
+      countVendas,
       byPaymentMethod,
-      byCustomer,
       byCategory,
+      customerSummary,
       salesList: sales,
     };
   }

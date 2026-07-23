@@ -114,16 +114,20 @@ export class TransactionService {
 
     const periodLabel = periodLabelMap[period] || "deste Mês";
 
-    if (salesSummary.count === 0) {
+    if (salesSummary.salesList.length === 0) {
       return `🛍️ *Resumo de Vendas ${periodLabel}*\n\nNenhuma venda foi registrada para este período.`;
     }
 
     let message = `🛍️ *Resumo Detalhado de Vendas ${periodLabel}*\n\n`;
-    message += `💰 *Faturamento Total:* ${formatMoney(salesSummary.totalVendas)}\n`;
-    message += `📦 *Total de Vendas Realizadas:* ${salesSummary.count} venda(s)\n`;
+    message += `💰 *Vendas de Produtos (Faturamento):* ${formatMoney(salesSummary.totalNovasVendas)}\n`;
+    message += `📦 *Quantidade de Vendas:* ${salesSummary.countVendas} venda(s)\n`;
 
-    if (salesSummary.totalFiadoAtestado > 0) {
-      message += `📝 *Vendas em Fiado (A Receber):* ${formatMoney(salesSummary.totalFiadoAtestado)}\n`;
+    if (salesSummary.totalRecebimentosFiado > 0) {
+      message += `💵 *Fiados Quitados/Entrados no Caixa:* ${formatMoney(salesSummary.totalRecebimentosFiado)}\n`;
+    }
+
+    if (salesSummary.totalFiadoPendenteAtual > 0) {
+      message += `📝 *Fiado Pendente a Receber:* ${formatMoney(salesSummary.totalFiadoPendenteAtual)}\n`;
     }
 
     if (Object.keys(salesSummary.byPaymentMethod).length > 0) {
@@ -133,20 +137,30 @@ export class TransactionService {
       }
     }
 
-    if (Object.keys(salesSummary.byCustomer).length > 0) {
-      message += `\n👥 *Vendas por Cliente:*\n`;
-      for (const [customer, amount] of Object.entries(salesSummary.byCustomer)) {
-        message += `• ${customer}: ${formatMoney(amount as number)}\n`;
+    if (Object.keys(salesSummary.customerSummary).length > 0) {
+      message += `\n👥 *Situação por Cliente:*\n`;
+      for (const [customer, data] of Object.entries(salesSummary.customerSummary as Record<string, any>)) {
+        let statusStr = `${formatMoney(data.vendas)} em vendas`;
+        if (data.devendo > 0) {
+          statusStr += ` (R$ ${data.devendo.toFixed(2)} a receber 📝)`;
+        } else if (data.pagoFiado > 0) {
+          statusStr += ` (Pago integralmente ✅)`;
+        }
+        message += `• *${customer}:* ${statusStr}\n`;
       }
     }
 
-    message += `\n📋 *Detalhamento das Vendas:*\n`;
+    message += `\n📋 *Histórico de Lançamentos:*\n`;
     for (const s of salesSummary.salesList.slice(0, 10)) {
       const dateStr = new Date(s.date).toLocaleDateString("pt-BR");
       const clientStr = s.customerName ? ` | Cliente: ${s.customerName}` : "";
       const parcelasStr = s.installments && s.installments > 1 ? ` (${s.installments}x)` : "";
+      const isFiadoReceipt =
+        s.category.toLowerCase().includes("recebimento de fiado") ||
+        s.description.toLowerCase().includes("pagamento de fiado");
+      const icon = isFiadoReceipt ? "💵" : "📈";
 
-      message += `• *${formatMoney(Number(s.amount))}* - ${s.description}${clientStr}\n`;
+      message += `${icon} *${formatMoney(Number(s.amount))}* - ${s.description}${clientStr}\n`;
       message += `  ↳ _${s.paymentMethod}${parcelasStr}_ | ${dateStr}\n`;
     }
 
