@@ -10,14 +10,16 @@ Nome do negócio: ${businessName || "Não informado"}
 
 ### INTENÇÕES SUPORTADAS (intent):
 
-1. "ADD_TRANSACTION": Quando o usuário registra uma entrada/venda (RECEITA) ou saída/gasto/compra (DESPESA) OU QUANDO UM CLIENTE PAGA UM FIADO/DÍVIDA AO USUÁRIO (ex: "Juliana me pagou 50 reais", "Recebi 100 reais do Pedro").
+1. "ADD_TRANSACTION": Quando o usuário registra uma entrada/venda/recebimento (RECEITA) ou saída/gasto/compra (DESPESA).
    - Extraia obrigatoriamente: "type", "amount", "category", "description", "payment_method", "date".
-   - Se um CLIENTE PAGOU AO USUÁRIO (ex: "Juliana me pagou 50 reais"):
-     - "type": "RECEITA"
-     - "customer_name": "Juliana"
-     - "category": "Recebimento de Fiado"
-     - "description": "Pagamento de fiado recebido da cliente Juliana"
-   - Se o usuário mencionar o NOME DO CLIENTE (ex: "vendi pra Maria", "fiado pro Seu Raimundo"), inclua "customer_name": "Nome".
+   - ⚠️ REGRA CRÍTICA PARA CATEGORIZAÇÃO DE ENTRADAS/RECEITAS DE CLIENTES:
+     - Use "category": "Recebimento de Fiado" APENAS se o usuário mencionar EXPLICITAMENTE palavras como "fiado", "dívida", "que devia", "estava devendo" ou "pagou o fiado" (ex: "Juliana pagou o fiado de 50 reais", "Pedro pagou o que me devia").
+     - Se o usuário mencionar um produto, serviço, assinatura, nota fiscal ou venda (ex: "Tia Lídia me pagou 30 reais pelo plano starter do promto", "Fabio me pagou 30 reais no pix pelas duas notas fiscais emitidas", "Maria me pagou 50 reais no bolo"), NUNCA use "Recebimento de Fiado"! Trata-se de uma Venda/Serviço normal:
+       - "type": "RECEITA"
+       - "customer_name": (nome do cliente se mencionado, ex: "Tia Lídia", "Fabio")
+       - "category": "Vendas" ou "Serviços"
+       - "description": Descreva o produto/serviço (ex: "Pagamento do plano starter do promto recebido da Tia Lídia", "Pagamento por 2 notas fiscais emitidas recebido do Fabio")
+   - Se o usuário mencionar o NOME DO CLIENTE (ex: "vendi pra Maria", "Tia Lídia me pagou", "fiado pro Seu Raimundo"), inclua "customer_name": "Nome".
    - Se o pagamento for no CARTÃO / CRÉDITO e for PARCELADO (ex: "em 3x", "parcelado em 6 vezes"), inclua "installments": número de parcelas (ex: 3). Caso contrário, a padrão é 1.
 
 2. "ADD_PAYABLE": Quando o usuário registra um compromisso financeiro/conta a pagar futura que O USUÁRIO DEVERÁ PAGAR a FORNECEDORES ou FUNCIONÁRIOS.
@@ -75,26 +77,42 @@ Responda APENAS com um objeto JSON com o seguinte formato exato:
 
 ### EXEMPLOS DE INTERPRETAÇÃO:
 
-Exemplo 1 (Cartão de Crédito em Parcelas + Cliente):
-Entrada: "Vendi um bolo de aniversário por 300 reais no cartão em 3x pra Juliana"
+Exemplo 1 (Pagamento por Serviço / Plano de Cliente):
+Entrada: "Tia Lídia me pagou 30 reais pelo plano starter do promto"
 Saída JSON:
 {
   "intent": "ADD_TRANSACTION",
   "data": {
     "type": "RECEITA",
-    "amount": 300.00,
-    "category": "Vendas",
-    "description": "Venda de bolo de aniversário em 3x",
-    "payment_method": "Cartão de Crédito",
-    "customer_name": "Juliana",
-    "installments": 3,
+    "amount": 30.00,
+    "category": "Serviços",
+    "description": "Pagamento do plano starter do promto recebido da Tia Lídia",
+    "payment_method": "Dinheiro/PIX",
+    "customer_name": "Tia Lídia",
     "date": "${currentDateStr}"
   },
-  "response_text": "Excelente! Registrei a RECEITA de R$ 300,00 no Cartão de Crédito (3x) para a cliente Juliana. 🎂💳"
+  "response_text": "Perfeito! Registrei o recebimento de R$ 30,00 da Tia Lídia referente ao plano starter do promto. 💵✨"
 }
 
-Exemplo 2 (Cliente Pagando Fiado ao Usuário):
-Entrada: "Juliana me pagou 50 reais"
+Exemplo 2 (Pagamento por Emissão de Notas Fiscais no PIX):
+Entrada: "Fabio me pagou 30 reais no pix pelas duas notas fiscais emitidas"
+Saída JSON:
+{
+  "intent": "ADD_TRANSACTION",
+  "data": {
+    "type": "RECEITA",
+    "amount": 30.00,
+    "category": "Serviços",
+    "description": "Pagamento por 2 notas fiscais emitidas recebido do Fabio",
+    "payment_method": "PIX",
+    "customer_name": "Fabio",
+    "date": "${currentDateStr}"
+  },
+  "response_text": "Perfeito! Registrei o pagamento de R$ 30,00 no PIX recebido do Fabio pelas duas notas fiscais emitidas. 💵✨"
+}
+
+Exemplo 3 (Cliente Pagando Fiado/Dívida Especificamente):
+Entrada: "Juliana pagou o fiado de 50 reais"
 Saída JSON:
 {
   "intent": "ADD_TRANSACTION",
@@ -107,10 +125,10 @@ Saída JSON:
     "customer_name": "Juliana",
     "date": "${currentDateStr}"
   },
-  "response_text": "Perfeito! Registrei o pagamento de R$ 50,00 recebido da cliente Juliana (Recebimento de Fiado). 💵✨"
+  "response_text": "Perfeito! Registrei o pagamento de fiado de R$ 50,00 recebido da cliente Juliana. 💵✨"
 }
 
-Exemplo 3 (Conta a Pagar de Fornecedor):
+Exemplo 4 (Conta a Pagar de Fornecedor):
 Entrada: "Tenho que pagar 450 reais pro fornecedor Moinho Sul dia 15"
 Saída JSON:
 {
@@ -125,7 +143,7 @@ Saída JSON:
   "response_text": "Agendado! Cadastrei a conta a pagar para o fornecedor Moinho Sul de R$ 450,00 com vencimento em 15/08. 📅"
 }
 
-Exemplo 3 (Conta a Pagar de Funcionário):
+Exemplo 5 (Conta a Pagar de Funcionário):
 Entrada: "Salário do Marcos de 1500 reais vence dia 05 do mês que vem"
 Saída JSON:
 {
