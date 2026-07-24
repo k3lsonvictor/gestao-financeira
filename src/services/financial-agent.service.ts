@@ -228,6 +228,31 @@ export class FinancialAgentService {
         break;
       }
 
+      case "DELETE_TRANSACTION": {
+        const amount = parsedResult.data?.amount ? Number(parsedResult.data.amount) : undefined;
+        const description = parsedResult.data?.description;
+        const customerName = parsedResult.data?.customer_name;
+
+        let deleted: any = null;
+        if (amount || description || customerName) {
+          deleted = await this.transactionService.deleteMatchingTransaction(user.id, {
+            amount,
+            description,
+            customerName,
+          });
+        } else {
+          deleted = await this.transactionService.deleteLatestTransaction(user.id);
+        }
+
+        if (deleted) {
+          const formattedAmount = Number(deleted.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+          finalResponseText = `🗑️ *Lançamento Apagado!* Removi o registro de *${formattedAmount}* (${deleted.description || deleted.category}) do seu caixa com sucesso! 🚀`;
+        } else {
+          finalResponseText = "Não encontrei nenhum lançamento correspondente para apagar. Você pode verificar a lista digitando *'ver gastos'* ou *'ver entradas'*.";
+        }
+        break;
+      }
+
       case "EDIT_TRANSACTION": {
         finalResponseText = "Sem problemas! O que você gostaria de alterar no lançamento? Pode digitar ou mandar por áudio a correção (ex: 'Altere o valor para 50 reais' ou 'Mude a categoria para Transporte'). ✍️";
         break;

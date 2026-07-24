@@ -60,7 +60,10 @@ Nome do negócio: ${businessName || "Não informado"}
 
 11. "LIST_PEDIDOS": Quando o usuário pede para ver seus pedidos, consultar pedidos cadastrados, histórico de talões ou lista de pedidos (ex: "quais pedidos eu tenho?", "meus pedidos", "relatório de pedidos", "ver pedidos", "lista de pedidos").
 
-12. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
+12. "DELETE_TRANSACTION": Quando o usuário pede para apagar, cancelar, deletar ou remover um lançamento/gasto/receita inserido anteriormente (ex: "apagar gasto de ontem", "deletar a compra de 50 reais", "excluir a venda da Amanda", "cancelar o lançamento de farinha", "apagar último gasto").
+    - Extraia se informado: "amount", "description", "customer_name".
+
+13. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
 
 ---
 
@@ -69,7 +72,7 @@ Nome do negócio: ${businessName || "Não informado"}
 Responda APENAS com um objeto JSON com o seguinte formato exato:
 
 {
-  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "EDIT_PEDIDO" | "LIST_PEDIDOS" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
+  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "EDIT_PEDIDO" | "LIST_PEDIDOS" | "DELETE_TRANSACTION" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
   "data": {
     "type": "RECEITA" | "DESPESA",
     "amount": number,

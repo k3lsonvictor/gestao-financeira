@@ -54,6 +54,13 @@ export class TransactionService {
     return this.transactionRepository.deleteById(id, userId);
   }
 
+  async deleteMatchingTransaction(
+    userId: string,
+    criteria: { amount?: number; description?: string; customerName?: string }
+  ) {
+    return this.transactionRepository.deleteMatchingTransaction(userId, criteria);
+  }
+
   async getSummary(userId: string, period: "hoje" | "semana" | "mes" | "ano" | "geral" = "mes") {
     const now = new Date();
     let startDate: Date | undefined;

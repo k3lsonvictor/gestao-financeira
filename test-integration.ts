@@ -152,6 +152,16 @@ async function runIntegrationTest() {
   console.log("💬 Resposta da IA:\n", res10.responseText);
   console.log("🔘 Botões do Pedido:", JSON.stringify(res10.buttons));
 
+  // Teste 11: Apagar/Excluir Lançamento Anterior
+  console.log("\n1️⃣1️⃣ Testando Mensagem 11 (Excluir Lançamento): 'Apagar o gasto de 35 reais'");
+  const res11 = await agent.processIncomingMessage({
+    phoneNumber: testPhone,
+    messageType: "text",
+    textBody: "Apagar o gasto de 35 reais",
+  });
+  console.log("👉 Intenção:", res11.intent);
+  console.log("💬 Resposta da IA:\n", res11.responseText);
+
   console.log("\n==================================================");
   console.log("✅ TESTE DE INTEGRAÇÃO FINALIZADO COM SUCESSO!");
   console.log("==================================================");

@@ -60,6 +60,37 @@ export class TransactionRepository {
     return null;
   }
 
+  async deleteMatchingTransaction(
+    userId: string,
+    criteria: { amount?: number; description?: string; customerName?: string }
+  ) {
+    const where: Prisma.TransactionWhereInput = { userId };
+
+    if (criteria.amount && criteria.amount > 0) {
+      where.amount = criteria.amount;
+    }
+
+    if (criteria.customerName) {
+      where.customerName = { contains: criteria.customerName, mode: "insensitive" };
+    } else if (criteria.description) {
+      where.OR = [
+        { description: { contains: criteria.description, mode: "insensitive" } },
+        { category: { contains: criteria.description, mode: "insensitive" } },
+      ];
+    }
+
+    const target = await prisma.transaction.findFirst({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (target) {
+      await prisma.transaction.delete({ where: { id: target.id } });
+      return target;
+    }
+    return null;
+  }
+
   async findManyByUser(userId: string, filters?: TransactionFilterDTO) {
     const where: Prisma.TransactionWhereInput = { userId };
 
