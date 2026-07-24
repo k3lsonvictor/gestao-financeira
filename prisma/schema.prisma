@@ -1,9 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
 }
 
-generator client {
-  provider = "prisma-client-js"
+model User {
+  id           String        @id @default(uuid())
+  phoneNumber  String        @unique @map("phone_number")
+  name         String
+  businessName String?       @map("business_name")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  chatHistory  ChatHistory[]
+  payables     Payable[]
+  pedidos      Pedido[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Pedido {
+  id                 String          @id @default(uuid())
+  userId             String          @map("user_id")
+  clienteNome        String?         @map("cliente_nome")
+  dataEmissao        DateTime        @default(now()) @map("data_emissao") @db.Date
+  valorTotal         Decimal         @map("valor_total") @db.Decimal(12, 2)
+  valorAnotado       Decimal?        @map("valor_anotado") @db.Decimal(12, 2)
+  divergenciaCalculo Boolean         @default(false) @map("divergencia_calculo")
+  statusPedido       StatusPedido    @default(PENDENTE) @map("status_pedido")
+  statusPagamento    StatusPagamento @default(PENDENTE) @map("status_pagamento")
+  imagemUrl          String?         @map("imagem_url")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  itens              ItemPedido[]
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pedidos")
+}
+
+model ItemPedido {
+  id            String   @id @default(uuid())
+  pedidoId      String   @map("pedido_id")
+  descricao     String
+  quantidade    Decimal  @db.Decimal(10, 3)
+  precoUnitario Decimal  @map("preco_unitario") @db.Decimal(12, 2)
+  subtotal      Decimal  @db.Decimal(12, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  pedido        Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@map("itens_pedido")
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  type          TransactionType
+  amount        Decimal         @db.Decimal(12, 2)
+  category      String
+  description   String
+  date          DateTime        @default(now()) @db.Date
+  paymentMethod String          @map("payment_method")
+  receiptUrl    String?         @map("receipt_url")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  customerName  String?         @map("customer_name")
+  installments  Int?            @default(1)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Payable {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  recipientName String        @map("recipient_name")
+  recipientType RecipientType @default(FORNECEDOR) @map("recipient_type")
+  description   String
+  amount        Decimal       @db.Decimal(12, 2)
+  dueDate       DateTime      @map("due_date") @db.Date
+  status        PayableStatus @default(PENDENTE)
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payables")
+}
+
+model ChatHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  role      ChatRole
+  content   String
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_history")
 }
 
 enum TransactionType {
@@ -29,20 +120,6 @@ enum RecipientType {
   OUTRO
 }
 
-model User {
-  id           String        @id @default(uuid())
-  phoneNumber  String        @unique @map("phone_number")
-  name         String
-  businessName String?       @map("business_name")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  transactions Transaction[]
-  chatHistory  ChatHistory[]
-  payables     Payable[]
-  pedidos      Pedido[]
-
-  @@map("users")
-}
-
 enum StatusPedido {
   PENDENTE
   EM_SEPARACAO
@@ -54,86 +131,4 @@ enum StatusPagamento {
   PENDENTE
   PARCIAL
   QUITADO
-}
-
-model Pedido {
-  id                 String          @id @default(uuid())
-  userId             String          @map("user_id")
-  clienteNome        String?         @map("cliente_nome")
-  dataEmissao        DateTime        @default(now()) @map("data_emissao") @db.Date
-  valorTotal         Decimal         @map("valor_total") @db.Decimal(12, 2)
-  valorAnotado       Decimal?        @map("valor_anotado") @db.Decimal(12, 2)
-  divergenciaCalculo Boolean         @default(false) @map("divergencia_calculo")
-  statusPedido       StatusPedido    @default(PENDENTE) @map("status_pedido")
-  statusPagamento    StatusPagamento @default(PENDENTE) @map("status_pagamento")
-  imagemUrl          String?         @map("imagem_url")
-  createdAt          DateTime        @default(now()) @map("created_at")
-  updatedAt          DateTime        @updatedAt @map("updated_at")
-
-  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  itens ItemPedido[]
-
-  @@map("pedidos")
-}
-
-model ItemPedido {
-  id            String   @id @default(uuid())
-  pedidoId      String   @map("pedido_id")
-  descricao     String
-  quantidade    Decimal  @db.Decimal(10, 3)
-  precoUnitario Decimal  @map("preco_unitario") @db.Decimal(12, 2)
-  subtotal      Decimal  @db.Decimal(12, 2)
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-
-  @@map("itens_pedido")
-}
-
-model Transaction {
-  id            String          @id @default(uuid())
-  userId        String          @map("user_id")
-  type          TransactionType
-  amount        Decimal         @db.Decimal(12, 2)
-  category      String
-  description   String          @db.Text
-  date          DateTime        @default(now()) @db.Date
-  paymentMethod String          @map("payment_method")
-  customerName  String?         @map("customer_name")
-  installments  Int?            @default(1)
-  receiptUrl    String?         @map("receipt_url")
-  createdAt     DateTime        @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("transactions")
-}
-
-model Payable {
-  id            String        @id @default(uuid())
-  userId        String        @map("user_id")
-  recipientName String        @map("recipient_name")
-  recipientType RecipientType @default(FORNECEDOR) @map("recipient_type")
-  description   String        @db.Text
-  amount        Decimal       @db.Decimal(12, 2)
-  dueDate       DateTime      @map("due_date") @db.Date
-  status        PayableStatus @default(PENDENTE)
-  paidAt        DateTime?     @map("paid_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("payables")
-}
-
-model ChatHistory {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  role      ChatRole
-  content   String   @db.Text
-  timestamp DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("chat_history")
 }
