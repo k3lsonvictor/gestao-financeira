@@ -108,6 +108,33 @@ export class PedidoRepository {
     });
   }
 
+  async findOrderByIdOrSnippetOrClient(userId: string, search: string) {
+    const cleanSearch = search.trim();
+    if (!cleanSearch) return this.findLatestByUser(userId);
+
+    const byId = await prisma.pedido.findFirst({
+      where: { userId, id: cleanSearch },
+      include: { itens: true },
+    });
+    if (byId) return byId;
+
+    const bySnippet = await prisma.pedido.findFirst({
+      where: { userId, id: { startsWith: cleanSearch } },
+      include: { itens: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (bySnippet) return bySnippet;
+
+    const byClient = await prisma.pedido.findFirst({
+      where: { userId, clienteNome: { contains: cleanSearch, mode: "insensitive" } },
+      include: { itens: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (byClient) return byClient;
+
+    return this.findLatestByUser(userId);
+  }
+
   async updateOrderItems(id: string, itens: CreateItemPedidoDTO[], clienteNome?: string | null) {
     const valorTotal = itens.reduce((sum, item) => sum + (item.subtotal || item.quantidade * item.precoUnitario), 0);
 

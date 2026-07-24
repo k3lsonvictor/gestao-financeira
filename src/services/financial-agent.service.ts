@@ -93,16 +93,13 @@ export class FinancialAgentService {
         responseText: resp,
       };
     } else if (cleanText.startsWith("ped_pdf_") || cleanLower.includes("gerar pdf") || cleanLower.includes("pdf")) {
-      let pedidoId = cleanText.startsWith("ped_pdf_") ? cleanText.replace("ped_pdf_", "").trim() : "";
+      let rawParam = cleanText.startsWith("ped_pdf_")
+        ? cleanText.replace("ped_pdf_", "").trim()
+        : cleanText.replace(/gerar pdf|pdf do pedido|pdf/gi, "").trim();
 
-      if (!pedidoId || pedidoId === "doc") {
-        const latestOrder = await this.pedidoRepository.findLatestByUser(user.id);
-        if (latestOrder) {
-          pedidoId = latestOrder.id;
-        }
-      }
+      const matchedOrder = await this.pedidoRepository.findOrderByIdOrSnippetOrClient(user.id, rawParam);
 
-      if (!pedidoId) {
+      if (!matchedOrder) {
         const resp = "Não encontrei nenhum pedido recente para gerar o PDF. Envie a foto de um talão para começar!";
         await this.chatHistoryRepo.addMessage(user.id, "assistant", resp);
         return {
@@ -113,8 +110,9 @@ export class FinancialAgentService {
         };
       }
 
-      const pdfUrl = `${env.publicUrl}/api/finance/pedido/${pedidoId}/pdf`;
-      const resp = `📄 *Seu Pedido em PDF está pronto para visualização/impressão!*\n\n📥 *Link do Documento/PDF:* ${pdfUrl}\n\n*(Clique no link para abrir a via completa do pedido).* 📗✨`;
+      const pdfUrl = `${env.publicUrl}/api/finance/pedido/${matchedOrder.id}/pdf`;
+      const clienteInfo = matchedOrder.clienteNome ? ` (Cliente: ${matchedOrder.clienteNome})` : "";
+      const resp = `📄 *Seu Pedido #${matchedOrder.id.substring(0, 8)}${clienteInfo} em PDF está pronto!*\n\n📥 *Link do Documento/PDF:* ${pdfUrl}\n\n*(Clique no link para visualizar e imprimir a via completa).* 📗✨`;
       await this.chatHistoryRepo.addMessage(user.id, "assistant", resp);
       return {
         userId: user.id,
