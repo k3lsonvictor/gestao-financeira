@@ -184,4 +184,37 @@ IMPORTANTE:
       buttons,
     };
   }
+
+  /**
+   * Formata a lista de pedidos em um relatório amigável no WhatsApp
+   */
+  formatPedidosListWhatsAppMessage(pedidos: any[]) {
+    if (!pedidos || pedidos.length === 0) {
+      return "📋 *Nenhum pedido cadastrado no momento.*\n\nEnvie uma foto de um talão de pedido manuscrito para registrar seu primeiro pedido!";
+    }
+
+    const formatMoney = (val: number) =>
+      Number(val).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+    let message = `📋 *Seus Pedidos Registrados (${pedidos.length})*\n\n`;
+
+    for (const p of pedidos) {
+      const dateStr = new Date(p.dataEmissao).toLocaleDateString("pt-BR");
+      const clienteStr = p.clienteNome || "Cliente Não Identificado";
+      const totalStr = formatMoney(Number(p.valorTotal));
+
+      const statusIcon = p.statusPagamento === "QUITADO" ? "✅ QUITADO" : "⏳ PENDENTE";
+      const itensSummary = (p.itens || []).map((i: any) => `${Number(i.quantidade)}x ${i.descricao}`).join(", ");
+
+      message += `• *Pedido #${p.id.substring(0, 8)}* (${clienteStr})\n`;
+      message += `   ↳ Data: ${dateStr} | Valor: *${totalStr}* | Status: ${statusIcon}\n`;
+      if (itensSummary) {
+        message += `   ↳ Itens: _${itensSummary}_\n`;
+      }
+      message += `\n`;
+    }
+
+    message += `📥 *Dica:* Para visualizar/baixar o PDF de qualquer pedido, digite *"gerar pdf"*. 📄✨`;
+    return message;
+  }
 }

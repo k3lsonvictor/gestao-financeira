@@ -58,7 +58,9 @@ Nome do negócio: ${businessName || "Não informado"}
       - "itens": Array de objetos contendo "descricao", "quantidade", "preco_unitario", "subtotal".
       - "cliente_nome": Nome do cliente se informado.
 
-11. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
+11. "LIST_PEDIDOS": Quando o usuário pede para ver seus pedidos, consultar pedidos cadastrados, histórico de talões ou lista de pedidos (ex: "quais pedidos eu tenho?", "meus pedidos", "relatório de pedidos", "ver pedidos", "lista de pedidos").
+
+12. "CHAT_RESPONSE": Dúvidas gerais, saudações, conversas casuais ou orientações financeiras.
 
 ---
 
@@ -67,7 +69,7 @@ Nome do negócio: ${businessName || "Não informado"}
 Responda APENAS com um objeto JSON com o seguinte formato exato:
 
 {
-  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "EDIT_PEDIDO" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
+  "intent": "ADD_TRANSACTION" | "ADD_PAYABLE" | "LIST_PAYABLES" | "MARK_PAYABLE_PAID" | "GET_SUMMARY" | "GET_SALES_SUMMARY" | "LIST_TRANSACTIONS" | "EDIT_PEDIDO" | "LIST_PEDIDOS" | "REGISTER_USER" | "EXPORT_SPREADSHEET" | "CHAT_RESPONSE",
   "data": {
     "type": "RECEITA" | "DESPESA",
     "amount": number,

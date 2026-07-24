@@ -275,6 +275,12 @@ export class FinancialAgentService {
         break;
       }
 
+      case "LIST_PEDIDOS": {
+        const pedidos = await this.pedidoRepository.findManyByUser(user.id);
+        finalResponseText = this.pedidoOcrService.formatPedidosListWhatsAppMessage(pedidos);
+        break;
+      }
+
       case "ADD_PAYABLE": {
         if (parsedResult.data && parsedResult.data.amount && parsedResult.data.recipient_name) {
           payableCreated = await this.payableService.createPayable({

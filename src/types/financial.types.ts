@@ -16,6 +16,7 @@ export type IntentType =
   | "OCR_PEDIDO"
   | "CONFIRM_PEDIDO"
   | "EDIT_PEDIDO"
+  | "LIST_PEDIDOS"
   | "GENERATE_PEDIDO_PDF"
   | "REGISTER_USER"
   | "EXPORT_SPREADSHEET"
